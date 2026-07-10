@@ -2,6 +2,7 @@ package br.com.cotiinformatica.api_financas.controllers;
 
 
 import br.com.cotiinformatica.api_financas.dtos.CategoriaRequest;
+import br.com.cotiinformatica.api_financas.exceptions.RegistroNaoEncontradoException;
 import br.com.cotiinformatica.api_financas.exceptions.ValidacaoException;
 import br.com.cotiinformatica.api_financas.services.CategoriaService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,13 +40,14 @@ public class CategoriaController {
     public ResponseEntity<?> alterar(@PathVariable UUID id, @RequestBody CategoriaRequest request) {
 
         try {
-            var response = categoriaService.criar(request);
+            var response = categoriaService.alterar(id, request);
 
             //HTTP 200 OK
             return ResponseEntity.status(200).body(response);
 
         }
-        catch (ValidacaoException e) {
+
+        catch (RegistroNaoEncontradoException e) {
             //HTTP 404 (NOT FOUND)
             return ResponseEntity.status(404).body(e.getMessage());
         }
@@ -62,7 +64,7 @@ public class CategoriaController {
             return ResponseEntity.status(200).body(response);
 
         }
-        catch (ValidacaoException e) {
+        catch (RegistroNaoEncontradoException e) {
             //HTTP 404 (NOT FOUND)
             return ResponseEntity.status(404).body(e.getMessage());
         }
@@ -79,7 +81,21 @@ public class CategoriaController {
         return ResponseEntity.status(200).body(response);
 
 
+    }
 
+    @GetMapping("obter/{id}")
+    public ResponseEntity<?> obterPorId(@PathVariable UUID id) {
+        try {
+            var response = categoriaService.obterPorId(id);
+
+            return ResponseEntity.status(200).body(response);
+
+        }
+        catch (RegistroNaoEncontradoException e) {
+            //HTTP 404 NOT FOUND
+            return ResponseEntity.status(404).body(e.getMessage());
+
+        }
     }
 
 }
