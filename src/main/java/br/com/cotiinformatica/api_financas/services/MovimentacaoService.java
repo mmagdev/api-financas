@@ -11,9 +11,13 @@ import br.com.cotiinformatica.api_financas.exceptions.ValidacaoException;
 import br.com.cotiinformatica.api_financas.repositories.CategoriaRepository;
 import br.com.cotiinformatica.api_financas.repositories.MovimentacaoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
 
 @Service
 public class MovimentacaoService {
@@ -58,6 +62,99 @@ public class MovimentacaoService {
     }
 
     /*
+        Método para alterar uma movimentaçao no banco de dados
+     */
+    public MovimentacaoResponse alterar(UUID id, MovimentacaoRequest request) {
+
+        //Consultar a movimentação no banco de dados pelo ID
+        var movimentacao = movimentacaoRepository.findById(id)
+                .orElseThrow(() -> new RegistroNaoEncontradoException("Movimentação não encontrada."));
+
+        //Verificar se a categoria existe no banco de dados
+        var categoria = categoriaRepository.findById(request.categoriaId())
+                .orElseThrow(() -> new RegistroNaoEncontradoException("Categoria não encontrada."));
+
+        //Executar as validações
+        validarMovimentacao(request);
+
+        //Preenchendo os dados da movimentação
+        movimentacao.setNome(request.nome());
+        movimentacao.setData(request.data());
+        movimentacao.setValor(BigDecimal.valueOf(request.valor()));
+        movimentacao.setTipo(TipoMovimentacao.valueOf(request.tipo()));
+        movimentacao.setCategoria(categoria);
+
+
+
+
+        //Salvar a movimentação no banco de dados
+        movimentacaoRepository.save(movimentacao);
+
+        //Retornar os dados da movimentação cadastrada usando o dto
+        return toResponse(movimentacao);
+
+    }
+
+    /*
+        Método para excluir uma movimentaçao no banco de dados
+     */
+    public MovimentacaoResponse excluir(UUID id) {
+
+        //Consultar a movimentação no banco de dados pelo id
+        var movimentacao = movimentacaoRepository.findById(id)
+                .orElseThrow(() -> new RegistroNaoEncontradoException("Movimentação não encontrada."));
+
+        //Excluir a movimentação no banco de dados
+        movimentacaoRepository.delete(movimentacao);
+
+        //Retornar os dados da movimentação cadastrada usando o DTO
+        return toResponse(movimentacao);
+    }
+
+    /*
+    Método para consultar as movimentações por período de datas
+    e com paginação
+     */
+
+    public Page<MovimentacaoResponse> consultar(
+            LocalDate dataInicio,
+            LocalDate dataFim,
+            int pageIndex,
+            int pageSize) {
+
+        //Validação das datas
+        if(dataInicio.isAfter(dataFim)) {
+            throw new ValidacaoException("A data inicial não pode ser maior do que a data final.");
+        }
+
+        //Configurando a página
+        if(pageSize > 25) pageSize = 25;
+        var pageable = PageRequest.of(pageIndex, pageSize);
+
+        //Consultar as movimentações no banco de dados
+        var movimentacoes = movimentacaoRepository.findByData(dataInicio, dataFim, pageable);
+
+        //Retornar os dados da movimentação cadastrada usando o DTO
+        return movimentacoes.map(this::toResponse);
+
+    }
+
+    /*
+    Método para consultar uma movimentacao pelo id
+     */
+
+    public MovimentacaoResponse obterPorId(UUID id) {
+
+        //Consultando a movimentação pelo ID no banco de dados
+        var movimentacao = movimentacaoRepository.findById(id)
+                .orElseThrow(() -> new RegistroNaoEncontradoException("Movimentação inexistente."));
+
+        //Retornando os dados da movimentacao
+        return toResponse(movimentacao);
+
+    }
+
+    /*
     Método para validar os dados da movimentação
      */
     public void validarMovimentacao(MovimentacaoRequest request) {
@@ -70,11 +167,11 @@ public class MovimentacaoService {
 
         }
 
-        if(request.valor().doubleValue() <= 0) {
+        if(request.valor() <= 0) {
             throw new ValidacaoException("O valor da movimentação deve ser maior do que 0.");
         }
 
-        if(!request.tipo().toString().equals("DESPESA") && !request.tipo().toString().equals("RECEITA")) {
+        if(!request.tipo().equals("DESPESA") && !request.tipo().equals("RECEITA")) {
            throw new ValidacaoException("O tipo da movimenação deve ter RECEITA ou DESPESA.");
             }
     }
