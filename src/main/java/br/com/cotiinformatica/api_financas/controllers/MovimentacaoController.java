@@ -91,4 +91,21 @@ public class MovimentacaoController {
             return ResponseEntity.status(404).body(e.getMessage());
         }
     }
+
+    @PostMapping("gerar-relatorio")
+    public ResponseEntity<?> gerarRelatorio(@RequestParam LocalDate dataInicio, @RequestParam LocalDate dataFim)
+            throws Exception {
+        try{
+          var response = movimentacaoService.gerarRelatorioMovimentacoes(dataInicio, dataFim);
+
+          return ResponseEntity.status(200).body(response);
+
+        }
+        catch (ValidacaoException e){
+            return ResponseEntity.status(400).body(e.getMessage());
+
+        }
+
+    }
+
 }
